@@ -1,0 +1,28 @@
+Mangayomi
+=========
+
+Portions of the player implementation are adapted from Mangayomi:
+https://github.com/kodjodevf/mangayomi
+
+Copyright Mangayomi contributors. Licensed under the Apache License 2.0.
+The adapted files have been modified for Sora's PlayerSource model and local
+preferences. The Apache License is available at:
+https://www.apache.org/licenses/LICENSE-2.0
+
+media_kit subtitle view
+=======================
+
+The subtitle view adapted through Mangayomi originated in media_kit:
+https://github.com/media-kit/media-kit
+Copyright 2021 and onwards, Hitesh Kumar Saini. Licensed under the MIT License.
+
+flutter_qjs and QuickJS
+=======================
+
+JavaScript execution uses flutter_qjs:
+https://github.com/kodjodevf/flutter_qjs
+Copyright flutter_qjs contributors. Licensed under the MIT License.
+
+flutter_qjs embeds QuickJS:
+https://bellard.org/quickjs/
+Copyright Fabrice Bellard and Charlie Gordon. Licensed under the MIT License.

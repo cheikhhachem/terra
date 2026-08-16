@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for the release (e.g., v1.0.7)'
+        required: true
+        default: 'v0.0.0-test'
+      notes:
+        description: 'Optional manual release notes to prepend before auto-generated notes'
+        required: false
+        default: ''
+
+env:
+  VERSION: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  build-android:
+    name: Android
+    uses: ./.github/workflows/build-android.yml
+
+  build-ios:
+    name: iOS
+    uses: ./.github/workflows/build-ios.yml
+
+  build-windows:
+    name: Windows
+    uses: ./.github/workflows/build-windows.yml
+
+  build-linux:
+    name: Linux
+    uses: ./.github/workflows/build-linux.yml
+
+  create-release:
+    name: Create GitHub release
+    needs:
+      - build-android
+      - build-ios
+      - build-windows
+      - build-linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Rename artifacts with version
+        run: |
+          VERSION="${VERSION}"
+          mkdir -p upload
+          for f in artifacts/*.apk; do
+            [ -e "$f" ] || continue
+            base=$(basename "$f")
+            cp "$f" "upload/Terra-${VERSION}-${base}"
+          done
+          cp artifacts/Terra.ipa "upload/Terra-${VERSION}-iOS.ipa" 2>/dev/null || true
+          cp artifacts/Terra-Windows-Portable.zip "upload/Terra-${VERSION}-Windows-Portable.zip" 2>/dev/null || true
+          cp artifacts/Terra-Windows-Setup.exe "upload/Terra-${VERSION}-Windows-Setup.exe" 2>/dev/null || true
+          cp artifacts/Terra-Linux.tar.gz "upload/Terra-${VERSION}-Linux.tar.gz" 2>/dev/null || true
+          cp artifacts/Terra-x86_64.AppImage "upload/Terra-${VERSION}-x86_64.AppImage" 2>/dev/null || true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
+          body: ${{ github.event.inputs.notes }}
+          files: upload/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

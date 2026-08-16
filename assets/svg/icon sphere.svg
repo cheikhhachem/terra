@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.1"
+   style="display: block;"
+   viewBox="0 0 2048 2048"
+   width="1000"
+   height="1000"
+   preserveAspectRatio="none"
+   id="svg6"
+   sodipodi:docname="icon sphere.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs6" />
+  <sodipodi:namedview
+     id="namedview6"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.798"
+     inkscape:cx="500"
+     inkscape:cy="500"
+     inkscape:window-width="1920"
+     inkscape:window-height="1012"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg6" />
+  <path
+     transform="translate(0,0)"
+     fill="rgb(206,43,29)"
+     d="M 1064.08 113.474 C 1073.06 113.892 1083.4 116.745 1092.48 116.827 C 1135.45 117.216 1177.67 125.917 1219.65 134.61 C 1238.14 138.44 1258.66 142.784 1276.94 147.906 C 1373.23 175.86 1463.65 221.018 1543.84 281.195 C 1558.38 292.234 1572.06 304.681 1587.16 315.576 C 1602.2 326.002 1615.23 342.771 1628.62 354.032 C 1645.92 367.035 1657.79 383.647 1672.05 398.974 C 1896.77 640.481 1976.29 993.571 1872.74 1307.83 C 1809.97 1495.53 1689.11 1658.4 1527.65 1772.86 C 1394.08 1866.38 1237.18 1921 1074.41 1930.65 C 1051.85 1931.96 1031.93 1933.08 1009.11 1931.69 C 1001.25 1931.22 997.678 1932.67 989.214 1931.18 C 962.196 1931.85 921.35 1925.75 894.732 1921.42 C 689.761 1888.1 504.377 1782.32 365.946 1628.38 C 259.998 1512.23 186.254 1370.4 152.028 1216.96 C 136.273 1145.67 130.321 1073.61 132.244 1000.73 C 136.383 826.632 190.911 657.467 289.225 513.724 C 298.649 499.839 307.229 485.663 317.507 472.35 C 392.318 373.771 486.113 291.171 593.358 229.422 C 708.825 163.246 842.073 121.455 975.547 117.235 C 982.129 117.027 989.161 114.15 995.843 114.037 C 1016.86 113.681 1041.63 116.504 1062.3 113.725 L 1064.08 113.474 z"
+     id="path2" />
+</svg>

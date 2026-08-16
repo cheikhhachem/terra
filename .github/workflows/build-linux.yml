@@ -1,0 +1,72 @@
+name: Build Linux
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-linux:
+    name: Build Linux release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+            libstdc++-12-dev libsecret-1-dev libasound2-dev libmpv-dev
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Package Linux bundle
+        run: |
+          cd build/linux/x64/release
+          tar czf Terra-Linux.tar.gz bundle/
+
+      - name: Download appimagetool
+        run: |
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+
+      - name: Build AppImage
+        run: |
+          mkdir -p AppDir/usr/bin AppDir/usr/lib AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/512x512/apps
+          cp -r build/linux/x64/release/bundle/* AppDir/usr/bin/
+          cp linux/com.cheikhhachem.terra.desktop AppDir/usr/share/applications/
+          cp linux/runner/resources/app_icon.png AppDir/usr/share/icons/hicolor/512x512/apps/com.cheikhhachem.terra.png
+          cp AppDir/usr/share/applications/com.cheikhhachem.terra.desktop AppDir/
+          cp AppDir/usr/share/icons/hicolor/512x512/apps/com.cheikhhachem.terra.png AppDir/com.cheikhhachem.terra.png
+          cat > AppDir/AppRun <<'EOF'
+          #!/bin/sh
+          SELF=$(readlink -f "$0")
+          HERE=${SELF%/*}
+          export PATH="${HERE}/usr/bin:${PATH}"
+          export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+          exec "${HERE}/usr/bin/terra" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+          ./appimagetool --appimage-extract-and-run AppDir build/linux/x64/release/Terra-x86_64.AppImage
+
+      - name: Upload Linux bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-tar
+          path: build/linux/x64/release/Terra-Linux.tar.gz
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: build/linux/x64/release/Terra-x86_64.AppImage

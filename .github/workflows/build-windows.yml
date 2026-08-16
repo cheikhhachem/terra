@@ -1,0 +1,48 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-windows:
+    name: Build Windows release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Package portable Windows build
+        run: |
+          cd build/windows/x64/runner/Release
+          7z a -tzip Terra-Windows-Portable.zip .
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y
+
+      - name: Build Windows installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\installer.iss
+
+      - name: Upload Windows portable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: build/windows/x64/runner/Release/Terra-Windows-Portable.zip
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: build/windows/x64/runner/Release/Terra-Windows-Setup.exe

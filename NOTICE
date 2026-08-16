@@ -1,0 +1,7 @@
+Terra is a GPL-3.0-or-later derivative inspired by Sora/Sulfur.
+
+Reference project: https://github.com/cranci1/Sora
+Copyright (c) 2024-2026 cranci and contributors.
+
+This Flutter implementation does not include or depend on SoraCore, whose
+separate license restricts it to official Sora/Sulfur Apple-platform builds.

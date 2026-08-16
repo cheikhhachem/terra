@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Terra
+Comment=Media library and player
+Exec=terra
+Icon=com.cheikhhachem.terra
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;
