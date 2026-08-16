@@ -43,6 +43,7 @@ class _TerraHomeState extends State<TerraHome> {
   late final ExtensionDetailRepository _extensionDetails =
       ExtensionDetailRepository(service: _extensionService);
   int _index = 0;
+  bool _sidebarCollapsed = false;
 
   @override
   void initState() {
@@ -69,7 +70,14 @@ class _TerraHomeState extends State<TerraHome> {
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 760;
     return FScaffold(
-      sidebar: wide ? _Sidebar(index: _index, onSelect: _select) : null,
+      sidebar: wide
+          ? _Sidebar(
+              index: _index,
+              onSelect: _select,
+              collapsed: _sidebarCollapsed,
+              onToggle: _toggleSidebar,
+            )
+          : null,
       footer: wide
           ? null
           : FBottomNavigationBar(
@@ -120,37 +128,101 @@ class _TerraHomeState extends State<TerraHome> {
   }
 
   void _select(int value) => setState(() => _index = value);
+
+  void _toggleSidebar() => setState(() => _sidebarCollapsed = !_sidebarCollapsed);
 }
 
 class _Sidebar extends StatelessWidget {
-  const _Sidebar({required this.index, required this.onSelect});
+  const _Sidebar({
+    required this.index,
+    required this.onSelect,
+    required this.collapsed,
+    required this.onToggle,
+  });
   final int index;
   final ValueChanged<int> onSelect;
+  final bool collapsed;
+  final VoidCallback onToggle;
 
   @override
-  Widget build(BuildContext context) => FSidebar(
-    header: const Padding(
-      padding: EdgeInsets.fromLTRB(18, 20, 18, 10),
-      child: Text(
-        'Terra',
-        style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: const Duration(milliseconds: 250),
+    curve: Curves.easeInOut,
+    width: collapsed ? 76 : 220,
+    child: ClipRect(
+      child: SafeArea(
+        right: false,
+        child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
+            child: Row(
+              mainAxisAlignment:
+                  collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+              children: [
+                if (!collapsed)
+                  Expanded(
+                    child: Text(
+                      'Terra',
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                FButton.icon(
+                  onPress: onToggle,
+                  variant: FButtonVariant.ghost,
+                  child: Icon(
+                    collapsed
+                        ? FLucideIcons.panelLeftOpen
+                        : FLucideIcons.panelLeftClose,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+              itemCount: _TerraHomeState._labels.length,
+              itemBuilder: (context, itemIndex) {
+                final selected = itemIndex == index;
+                final icon = _TerraHomeState._icons[itemIndex];
+                final label = _TerraHomeState._labels[itemIndex];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: collapsed
+                      ? Tooltip(
+                          message: label,
+                          child: FButton.icon(
+                            onPress: () => onSelect(itemIndex),
+                            variant: FButtonVariant.ghost,
+                            selected: selected,
+                            child: Icon(icon),
+                          ),
+                        )
+                      : FSidebarItem(
+                          selected: selected,
+                          icon: Icon(icon),
+                          label: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onPress: () => onSelect(itemIndex),
+                        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     ),
-    children: [
-      FSidebarGroup(
-        label: const Text('Browse'),
-        children: List.generate(
-          _TerraHomeState._labels.length,
-          (itemIndex) => FSidebarItem(
-            selected: itemIndex == index,
-            icon: Icon(_TerraHomeState._icons[itemIndex]),
-            label: Text(_TerraHomeState._labels[itemIndex]),
-            onPress: () => onSelect(itemIndex),
-          ),
-        ),
-      ),
-    ],
-  );
+  ),
+);
 }
 
 class _SettingsPage extends StatelessWidget {
