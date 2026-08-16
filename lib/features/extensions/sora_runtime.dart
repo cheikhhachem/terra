@@ -109,7 +109,8 @@ Future<void> _soraRuntimeWorker(SendPort ready) async {
 $_bridge
 ${payload['script']}
 if (typeof $function !== "function") throw new Error("Missing function: $function");
-return $function(...${jsonEncode(payload['arguments'])});
+const __terraResult = await $function(...${jsonEncode(payload['arguments'])});
+return typeof __terraResult === 'string' ? __terraResult : JSON.stringify(__terraResult);
 })()''', sourceUrl: 'terra-call.js');
       if (call.isError) throw SoraRuntimeException(call.stringResult);
       final result = await runtime.handlePromise(call, timeout: timeout);

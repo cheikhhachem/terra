@@ -132,7 +132,9 @@ class SoraMetadata {
       quality: _string(json['quality']),
       searchBaseUrl: _string(json['searchBaseUrl']),
       scriptUrl: scriptUrl,
-      asyncJS: _bool(json['asyncJS']),
+      asyncJS: _string(json['searchBaseUrl']).isEmpty
+          ? true
+          : _bool(json['asyncJS']),
       streamAsyncJS: _bool(json['streamAsyncJS']),
       softsub: _bool(json['softsub']),
       multiStream: _bool(json['multiStream']),

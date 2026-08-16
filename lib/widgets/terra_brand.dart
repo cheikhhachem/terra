@@ -27,12 +27,14 @@ class _TerraBrandState extends State<TerraBrand> {
 
   static bool _showingNatural = false;
   static bool _finishing = false;
+  static int _instanceCount = 0;
 
   int _tapCount = 0;
 
   @override
   void initState() {
     super.initState();
+    _instanceCount++;
     _sphereController ??= AnimationController(
       vsync: _tickerProvider,
       duration: const Duration(seconds: 20),
@@ -45,6 +47,21 @@ class _TerraBrandState extends State<TerraBrand> {
       vsync: _tickerProvider,
       duration: const Duration(seconds: 8),
     )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _instanceCount--;
+    if (_instanceCount <= 0) {
+      _instanceCount = 0;
+      _sphereController?.dispose();
+      _continentsController?.dispose();
+      _logoController?.dispose();
+      _sphereController = null;
+      _continentsController = null;
+      _logoController = null;
+    }
+    super.dispose();
   }
 
   Future<void> _onLogoTap() async {
