@@ -12,6 +12,8 @@ import '../library/media_poster_card.dart';
 import '../reading/read_detail_page.dart';
 import '../reading/read_download_repository.dart';
 import '../reading/reading_models.dart';
+import '../search/cinemeta_client.dart';
+import '../search/mangadex_client.dart';
 import '../../widgets/terra_header.dart';
 import '../../widgets/source_icon.dart';
 import '../../widgets/horizontal_edge_fade.dart';
@@ -46,6 +48,8 @@ class ExtensionSearchPage extends StatefulWidget {
 class _ExtensionSearchPageState extends State<ExtensionSearchPage> {
   static const _historyKey = 'terra.search.history.v1';
   List<String> _history = [];
+  final _cinemeta = const CinemetaClient();
+  final _mangadex = const MangaDexClient();
 
   @override
   void initState() {
@@ -106,6 +110,9 @@ class _ExtensionSearchPageState extends State<ExtensionSearchPage> {
             history: _history,
             remember: _remember,
             removeHistory: _removeHistory,
+            suggestions: (query) async => (await _cinemeta.search(query))
+                .map((item) => item.title)
+                .toList(),
             hintText: 'Title',
             emptyTitle: 'No active sources',
             emptyDetail: 'Install a source and turn on its active switch.',
@@ -141,6 +148,9 @@ class _ExtensionSearchPageState extends State<ExtensionSearchPage> {
             history: _history,
             remember: _remember,
             removeHistory: _removeHistory,
+            suggestions: (query) async => (await _mangadex.search(query))
+                .map((item) => item.title)
+                .toList(),
             hintText: 'Manga or novel title',
             emptyTitle: 'No active reading sources',
             emptyDetail:
@@ -165,6 +175,7 @@ class _SearchTab<T> extends StatefulWidget {
     required this.history,
     required this.remember,
     required this.removeHistory,
+    this.suggestions,
     required this.hintText,
     required this.emptyTitle,
     required this.emptyDetail,
@@ -180,6 +191,7 @@ class _SearchTab<T> extends StatefulWidget {
   final List<String> history;
   final Future<void> Function(String) remember;
   final Future<void> Function(String) removeHistory;
+  final Future<List<String>> Function(String query)? suggestions;
   final String hintText;
   final String emptyTitle;
   final String emptyDetail;
@@ -191,22 +203,74 @@ class _SearchTab<T> extends StatefulWidget {
   State<_SearchTab<T>> createState() => _SearchTabState<T>();
 }
 
-class _SearchTabState<T> extends State<_SearchTab<T>> {
-  final _query = TextEditingController();
+class _SearchTabState<T> extends State<_SearchTab<T>>
+    with AutomaticKeepAliveClientMixin {
+  final _queryController = TextEditingController();
+  final _focusNode = FocusNode();
   final Map<String, _SourceSearch<T>> _searches = {};
+  Timer? _suggestionsTimer;
+  Completer<List<String>>? _suggestionsCompleter;
+  String? _suggestionsQuery;
   int _generation = 0;
   int _resultOrder = 0;
   bool _submitted = false;
 
-  List<String> get _suggestions {
-    final query = _query.text.trim().toLowerCase();
-    return widget.history
-        .where((item) => query.isEmpty || item.toLowerCase().contains(query))
-        .toList();
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _queryController.addListener(_onQueryChanged);
+  }
+
+  @override
+  void dispose() {
+    _suggestionsTimer?.cancel();
+    if (_suggestionsCompleter != null &&
+        !_suggestionsCompleter!.isCompleted) {
+      _suggestionsCompleter!.complete(const []);
+    }
+    _queryController.removeListener(_onQueryChanged);
+    _queryController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<List<String>> _debouncedSuggestions(String query) async {
+    final fetcher = widget.suggestions;
+    if (fetcher == null || query.length < 2) return const [];
+    if (_suggestionsQuery == query && _suggestionsCompleter != null) {
+      return _suggestionsCompleter!.future;
+    }
+    _suggestionsTimer?.cancel();
+    if (_suggestionsCompleter != null &&
+        !_suggestionsCompleter!.isCompleted) {
+      _suggestionsCompleter!.complete(const []);
+    }
+    _suggestionsQuery = query;
+    _suggestionsCompleter = Completer<List<String>>();
+    _suggestionsTimer = Timer(const Duration(milliseconds: 150), () async {
+      try {
+        final result = await fetcher(query);
+        if (!_suggestionsCompleter!.isCompleted) {
+          _suggestionsCompleter!.complete(result);
+        }
+      } catch (_) {
+        if (!_suggestionsCompleter!.isCompleted) {
+          _suggestionsCompleter!.complete(const []);
+        }
+      }
+    });
+    return _suggestionsCompleter!.future;
   }
 
   Future<void> _search() async {
-    final query = _query.text.trim();
+    final query = _queryController.text.trim();
     final modules = widget.activeSources();
     if (query.isEmpty || modules.isEmpty) return;
     unawaited(widget.remember(query));
@@ -256,94 +320,171 @@ class _SearchTabState<T> extends State<_SearchTab<T>> {
   }
 
   @override
-  void dispose() {
-    _query.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: widget.sourcesListenable,
-    builder: (context, _) {
-      final active = widget.activeSources();
-      final compact = MediaQuery.sizeOf(context).width < 600;
-      return ListView(
-        padding: EdgeInsets.all(compact ? 12 : 16),
-        children: [
-          TextField(
-            controller: _query,
-            enabled: active.isNotEmpty,
-            textInputAction: TextInputAction.search,
-            onChanged: (_) => setState(() => _submitted = false),
-            onSubmitted: (_) => _search(),
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                onPressed: active.isEmpty ? null : _search,
-                icon: const Icon(Icons.arrow_forward),
-              ),
-              hintText: widget.hintText,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          if (!_submitted && _suggestions.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            ..._suggestions.map(
-              (item) => Material(
-                color: Colors.transparent,
-                child: ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.history, size: 20),
-                  title: Text(item),
-                  trailing: IconButton(
-                    tooltip: 'Remove from search history',
-                    onPressed: () => widget.removeHistory(item),
-                    icon: const Icon(Icons.close, size: 18),
+  Widget build(BuildContext context) {
+    super.build(context);
+    return ListenableBuilder(
+      listenable: widget.sourcesListenable,
+      builder: (context, _) {
+        final active = widget.activeSources();
+        final compact = MediaQuery.sizeOf(context).width < 600;
+        return ListView(
+          padding: EdgeInsets.all(compact ? 12 : 16),
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) => RawAutocomplete<String>(
+                key: ObjectKey(widget.history),
+                textEditingController: _queryController,
+                focusNode: _focusNode,
+                optionsBuilder: (value) async {
+                  final query = value.text.trim();
+                  final lowerQuery = query.toLowerCase();
+                  final history = widget.history
+                      .where(
+                        (item) =>
+                            lowerQuery.isEmpty ||
+                            item.toLowerCase().contains(lowerQuery),
+                      )
+                      .toList();
+                  if (query.length < 2) return history;
+                  final online = await _debouncedSuggestions(query);
+                  return [
+                    ...history,
+                    ...online
+                        .where(
+                          (title) =>
+                              title.isNotEmpty &&
+                              !history.contains(title) &&
+                              title.toLowerCase().contains(lowerQuery),
+                        )
+                        ,
+                  ];
+                },
+                fieldViewBuilder: (
+                  context,
+                  textEditingController,
+                  focusNode,
+                  onFieldSubmitted,
+                ) =>
+                    ListenableBuilder(
+                      listenable: textEditingController,
+                      builder: (context, _) => TextField(
+                        controller: textEditingController,
+                        focusNode: focusNode,
+                        enabled: active.isNotEmpty,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => _search(),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: Padding(
+                            padding: const EdgeInsets.only(right: 1),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (textEditingController.text.isNotEmpty)
+                                  IconButton(
+                                    tooltip: 'Clear',
+                                    onPressed: () {
+                                      textEditingController.clear();
+                                      focusNode.requestFocus();
+                                    },
+                                    icon: const Icon(Icons.close),
+                                  ),
+                                IconButton(
+                                  onPressed: active.isEmpty ? null : _search,
+                                  icon: const Icon(Icons.arrow_forward),
+                                ),
+                              ],
+                            ),
+                          ),
+                          hintText: widget.hintText,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                optionsViewBuilder: (context, onSelected, options) => Align(
+                  alignment: Alignment.topLeft,
+                  child: Material(
+                    elevation: 4,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth,
+                        maxHeight: 280,
+                      ),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        itemCount: options.length,
+                        itemBuilder: (context, index) {
+                          final item = options.elementAt(index);
+                          final isHistory = widget.history.contains(item);
+                          return ListTile(
+                            dense: true,
+                            contentPadding:
+                                const EdgeInsets.only(left: 16, right: 1),
+                            leading: Icon(
+                              isHistory ? Icons.history : Icons.search,
+                              size: 20,
+                            ),
+                            title: Text(item),
+                            trailing: isHistory
+                                ? IconButton(
+                                    tooltip: 'Remove from search history',
+                                    onPressed: () =>
+                                        widget.removeHistory(item),
+                                    icon: const Icon(Icons.close, size: 18),
+                                  )
+                                : null,
+                            onTap: () => onSelected(item),
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                  onTap: () {
-                    _query.text = item;
-                    _query.selection = TextSelection.collapsed(
-                      offset: item.length,
-                    );
-                    _search();
-                  },
                 ),
+                onSelected: (value) {
+                  _queryController.text = value;
+                  _queryController.selection =
+                      TextSelection.collapsed(offset: value.length);
+                  _focusNode.unfocus();
+                  _search();
+                },
               ),
             ),
+            const SizedBox(height: 24),
+            if (active.isEmpty)
+              _Status(
+                icon: Icons.extension_off_outlined,
+                title: widget.emptyTitle,
+                detail: widget.emptyDetail,
+              )
+            else if (!_submitted)
+              _Status(
+                icon: widget.idleIcon,
+                title: widget.idleTitle,
+                detail: widget.idleDetail,
+              )
+            else
+              ...(_searches.values
+                      .where(
+                        (search) => active.any(
+                          (module) => module.id == search.module.id,
+                        ),
+                      )
+                      .toList()
+                    ..sort(_compareSearches<T>))
+                  .map(
+                    (search) => _SourceResults<T>(
+                      search: search,
+                      compact: compact,
+                      sourceLabel: widget.sourceLabel,
+                      resultBuilder: widget.resultBuilder,
+                    ),
+                  ),
           ],
-          const SizedBox(height: 24),
-          if (active.isEmpty)
-            _Status(
-              icon: Icons.extension_off_outlined,
-              title: widget.emptyTitle,
-              detail: widget.emptyDetail,
-            )
-          else if (!_submitted)
-            _Status(
-              icon: widget.idleIcon,
-              title: widget.idleTitle,
-              detail: widget.idleDetail,
-            )
-          else
-            ...(_searches.values
-                    .where(
-                      (search) =>
-                          active.any((module) => module.id == search.module.id),
-                    )
-                    .toList()
-                  ..sort(_compareSearches<T>))
-                .map(
-                  (search) => _SourceResults<T>(
-                    search: search,
-                    compact: compact,
-                    sourceLabel: widget.sourceLabel,
-                    resultBuilder: widget.resultBuilder,
-                  ),
-                ),
-        ],
-      );
-    },
-  );
+        );
+      },
+    );
+  }
 }
 
 class _SourceSearch<T> {
