@@ -35,6 +35,10 @@ jobs:
     name: Linux
     uses: ./.github/workflows/build-linux.yml
 
+  build-macos:
+    name: macOS
+    uses: ./.github/workflows/build-macos.yml
+
   create-release:
     name: Create GitHub release
     needs:
@@ -42,6 +46,7 @@ jobs:
       - build-ios
       - build-windows
       - build-linux
+      - build-macos
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -66,6 +71,7 @@ jobs:
           cp artifacts/Terra-Windows-Setup.exe "upload/Terra-${VERSION}-Windows-Setup.exe" 2>/dev/null || true
           cp artifacts/Terra-Linux.tar.gz "upload/Terra-${VERSION}-Linux.tar.gz" 2>/dev/null || true
           cp artifacts/Terra-x86_64.AppImage "upload/Terra-${VERSION}-x86_64.AppImage" 2>/dev/null || true
+          cp artifacts/Terra.dmg "upload/Terra-${VERSION}-macOS.dmg" 2>/dev/null || true
 
       - name: Create release
         uses: softprops/action-gh-release@v2
