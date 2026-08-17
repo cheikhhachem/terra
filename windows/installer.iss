@@ -1,5 +1,5 @@
 #define MyAppName "Terra"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.1.1"
 #define MyAppPublisher "cheikhhachem"
 #define MyAppURL "https://github.com/cheikhhachem/terra"
 #define MyAppExeName "terra.exe"
